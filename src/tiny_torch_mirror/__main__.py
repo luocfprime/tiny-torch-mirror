@@ -33,21 +33,21 @@ app = typer.Typer()
 
 
 @app.command()
-def config():
+def config(config_path: Path = CONFIG_PATH):
     """Initialize config. (Run this on local machine where network is available)"""
-    if not CONFIG_PATH.exists():
+    if not config_path.exists():
         typer.confirm("No configuration file found. Create one?", abort=True)
-        CONFIG_PATH.write_text(yaml.dump(PyTorchMirrorConfig().model_dump()))  # type: ignore[call-arg]
+        config_path.write_text(yaml.dump(PyTorchMirrorConfig().model_dump()))  # type: ignore[call-arg]
 
     print(
-        f"Config file is at {CONFIG_PATH.absolute()}. To edit it, run \n```bash\nvim {CONFIG_PATH.absolute()}\n```"
+        f"Config file is at {config_path.absolute()}. To edit it, run \n```bash\nvim {config_path.absolute()}\n```"
     )
 
 
 @app.command()
-def sync():
+def sync(config_path: Path = CONFIG_PATH):
     """Update the remote mirror repo to sync with PyTorch index. (Run this on local machine where network is available)"""
-    config = load_config(CONFIG_PATH)
+    config = load_config(config_path)
 
     available_wheels = fetch_available_from_index()
     existing_wheels = fetch_existing_from_remote_mirror_repo()
@@ -159,10 +159,11 @@ def serve(
 
 @app.command()
 def verify(
-    path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root")
+    config_path: Path = CONFIG_PATH,
 ):
     """Verify the integrity of the mirror repo. (Run this on the same machine where the mirror is hosted)"""
-    config = get_config()
+    config = load_config(config_path)
+
     wheels = fetch_existing_from_local_mirror_repo(
         Path(config.mirror_root), config.packages, config.cuda_versions
     )
