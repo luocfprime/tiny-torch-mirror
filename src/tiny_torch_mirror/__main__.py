@@ -1,15 +1,15 @@
 import hashlib
-import http.server
 import itertools
+import json
 import logging
-import os
 import re
-import socketserver
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Optional
 
 import typer
+import uvicorn
 import yaml
 from rich.console import Console
 from tqdm import tqdm
@@ -27,6 +27,8 @@ from tiny_torch_mirror.core.fetch import (
 from tiny_torch_mirror.core.job import run_jobs_in_threadpool
 from tiny_torch_mirror.core.ui import PackageViewerApp
 from tiny_torch_mirror.core.utils import parse_wheel_name
+
+from .core.server import create_app
 
 logging.basicConfig(level=logging.INFO)
 
@@ -145,20 +147,46 @@ def sync(config_path: Path = CONFIG_PATH):
 def serve(
     path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root"),
     port: int = typer.Option(8080, help="Port to serve the mirror on"),
+    fallback_index: str = typer.Option(
+        "https://pypi.org/simple/", help="Fallback index URL for packages not in mirror"
+    ),
+    path_map: Optional[str] = typer.Option(
+        None,
+        help='JSON string mapping local paths to fallback paths, e.g., \'{"whl/cu118": ""}\'',
+    ),
 ):
-    """Serve the mirror repo using HTTP server. (Run this on the same machine where the mirror is hosted)"""
-    mirror_path = Path(path).expanduser().resolve()
-    os.chdir(mirror_path)
 
-    # Start server
-    Handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", port), Handler) as httpd:  # noqa
-        print(f"Serving at http://0.0.0.0:{port}")
-        print(f"To use the mirror, set the index URL to: http://localhost:{port}/")
-        print(
-            f"E.g. : pip install torch+cu118 --index-url http://localhost:{port}/whl/cu118"
-        )
-        httpd.serve_forever()
+    mirror_path = Path(path).expanduser().resolve()
+
+    # Parse path mappings
+    path_mappings = {}
+    if path_map:
+        try:
+            path_mappings = json.loads(path_map)
+        except json.JSONDecodeError:
+            print(f"Warning: Invalid path_map JSON: {path_map}")
+
+    # Create FastAPI app
+    app = create_app(mirror_path, fallback_index, path_mappings)
+
+    # Print startup info
+    print(f"\n{'=' * 60}")
+    print(f"PyTorch Mirror Server")
+    print(f"{'=' * 60}")
+    print(f"Serving at: http://0.0.0.0:{port}")
+    print(f"Mirror path: {mirror_path}")
+    print(f"Fallback to: {fallback_index}")
+
+    if path_mappings:
+        print(f"\nPath mappings:")
+        for local, remote in path_mappings.items():
+            print(f"  {local} -> {remote or '(root)'}")
+
+    print(f"\nExample usage:")
+    print(f"  pip install torch --index-url http://localhost:{port}/whl/cu118")
+    print(f"\n{'=' * 60}\n")
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 @app.command()
