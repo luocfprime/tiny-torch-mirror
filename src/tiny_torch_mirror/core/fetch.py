@@ -77,7 +77,7 @@ def fetch_existing_from_local_mirror_repo(
     )
 
     for package, cuda_version in product(packages, cuda_versions):
-        index_directory = Path(mirror_root, f"{cuda_version}/{package}")
+        index_directory = Path(mirror_root, "whl", cuda_version, package)
 
         if not index_directory.exists():
             logger.debug(f"{index_directory} does not exist.")

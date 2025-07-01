@@ -121,6 +121,7 @@ def get_wheel_dest_path(wheel_name: str, cuda_version: str) -> Path:
 
     return Path(
         config.mirror_root,
+        "whl",
         cuda_version,
         wheel_info["package_name"],
         wheel_name,
@@ -232,9 +233,13 @@ def remote_update_index_html(
     # Create the index.html content
     index_content = "<html><body>\n"
     for wheel_name, wheel_url, wheel_sha256 in wheels:
-        index_content += (
-            f'<a href="{wheel_url}#sha256={wheel_sha256}">{wheel_name}</a><br>\n'
-        )
+        if wheel_sha256:
+            index_content += (
+                f'<a href="{wheel_url}#sha256={wheel_sha256}">{wheel_name}</a><br>\n'
+            )
+        else:
+            index_content += f'<a href="{wheel_url}">{wheel_name}</a><br>\n'
+
     index_content += "</body></html>"
 
     # Use echo command to write the content to index.html

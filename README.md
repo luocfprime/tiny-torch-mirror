@@ -44,5 +44,5 @@ tiny-torch-mirror serve --path <path to your private mirror> --port 8081
 To install torch and torchvision with CUDA 11.8:
 
 ```bash
-pip install torch torchvision --index-url http://localhost:8081/cu118
+pip install torch torchvision --index-url http://localhost:8081/whl/cu118
 ```

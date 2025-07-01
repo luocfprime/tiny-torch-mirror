@@ -155,7 +155,7 @@ def serve(
     with socketserver.TCPServer(("", port), Handler) as httpd:  # noqa
         print(f"Serving at http://0.0.0.0:{port}")
         print(f"To use the mirror, set the index URL to: http://localhost:{port}/")
-        print(f"Example: pip install torch --index-url http://localhost:{port}/cu118")
+        print(f"E.g. : pip install torch --index-url http://localhost:{port}/whl/cu118")
         httpd.serve_forever()
 
 
@@ -174,6 +174,10 @@ def verify(
 
     def verify_wheel(wheel_info):
         wheel_name, wheel_path, expected_sha256 = wheel_info
+
+        if not expected_sha256:
+            # Skip wheels without SHA256
+            return None
 
         # Calculate actual SHA256
         sha256_hash = hashlib.sha256()
