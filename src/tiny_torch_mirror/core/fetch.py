@@ -8,15 +8,13 @@ from typing import List, Set, Tuple
 from urllib.parse import urljoin
 
 import httpx
-from structlog import get_logger
 from tqdm import tqdm
 
 from tiny_torch_mirror.core.config import get_config
+from tiny_torch_mirror.core.log import logger
 from tiny_torch_mirror.core.utils import (
     parse_index_page,
 )
-
-logger = get_logger()
 
 
 def fetch_available_from_index() -> Set[Tuple[str, str, str]]:

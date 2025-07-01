@@ -1,6 +1,7 @@
 import hashlib
 import http.server
 import itertools
+import logging
 import os
 import re
 import socketserver
@@ -16,7 +17,6 @@ from tqdm import tqdm
 from tiny_torch_mirror.core.config import (
     CONFIG_PATH,
     PyTorchMirrorConfig,
-    get_config,
     load_config,
 )
 from tiny_torch_mirror.core.fetch import (
@@ -27,6 +27,8 @@ from tiny_torch_mirror.core.fetch import (
 from tiny_torch_mirror.core.job import run_jobs_in_threadpool
 from tiny_torch_mirror.core.ui import PackageViewerApp
 from tiny_torch_mirror.core.utils import parse_wheel_name
+
+logging.basicConfig(level=logging.INFO)
 
 console = Console()
 app = typer.Typer()

@@ -7,10 +7,10 @@ from typing import List, Tuple
 
 import httpx
 import stamina
-from structlog import get_logger
 from tqdm import tqdm
 
 from tiny_torch_mirror.core.config import get_config
+from tiny_torch_mirror.core.log import logger
 from tiny_torch_mirror.core.sync import rsync
 from tiny_torch_mirror.core.utils import (
     get_wheel_dest_path,
@@ -20,9 +20,6 @@ from tiny_torch_mirror.core.utils import (
     remote_mkdir,
     remote_update_index_html,
 )
-
-logger = get_logger()
-
 
 # a lock to ensure only one thread can access the index.html file at a time
 index_lock = threading.Lock()
