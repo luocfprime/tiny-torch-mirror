@@ -160,84 +160,66 @@ def serve(
 
 
 @app.command()
-def verify(
-    config_path: Path = CONFIG_PATH,
-):
-    """Verify the integrity of the mirror repo. (Run this on the same machine where the mirror is hosted)"""
+def verify(config_path: Path = CONFIG_PATH):
+    """Verify the integrity of the mirror repo."""
     config = load_config(config_path)
-
     wheels = fetch_existing_from_local_mirror_repo(
         Path(config.mirror_root), config.packages, config.cuda_versions
     )
 
-    broken_wheels = []
-
     def verify_wheel(wheel_info):
-        wheel_name, wheel_path, expected_sha256 = wheel_info
+        name, path, expected_sha = wheel_info
 
-        if not expected_sha256:
-            # Skip wheels without SHA256
-            return None
+        if not expected_sha:
+            return name, path, "no_sha256", None
 
-        # Calculate actual SHA256
-        sha256_hash = hashlib.sha256()
         try:
-            with open(wheel_path, "rb") as f:
-                for byte_block in iter(lambda: f.read(4096), b""):
-                    sha256_hash.update(byte_block)
+            sha256 = hashlib.sha256()
+            with open(path, "rb") as f:
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
+                    sha256.update(chunk)
+            actual_sha = sha256.hexdigest()
 
-            actual_sha256 = sha256_hash.hexdigest()
-
-            if actual_sha256 != expected_sha256:
-                return (
-                    wheel_name,
-                    wheel_path,
-                    expected_sha256,
-                    actual_sha256,
-                    "checksum_mismatch",
-                )
-            return None
-
+            if actual_sha != expected_sha:
+                return name, path, "mismatch", (expected_sha, actual_sha)
         except FileNotFoundError:
-            return (wheel_name, wheel_path, expected_sha256, None, "file_not_found")
+            return name, path, "missing", None
         except Exception as e:
-            return (wheel_name, wheel_path, expected_sha256, None, f"error: {str(e)}")
+            return name, path, "error", str(e)
+
+        return None  # OK
 
     # Verify wheels concurrently
+    issues = []
     with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {executor.submit(verify_wheel, wheel): wheel for wheel in wheels}
+        futures = {executor.submit(verify_wheel, w): w for w in wheels}
 
-        for future in tqdm(
-            as_completed(futures), total=len(wheels), desc="Verifying wheels"
-        ):
+        for future in tqdm(as_completed(futures), total=len(wheels), desc="Verifying"):
             result = future.result()
             if result:
-                broken_wheels.append(result)
+                issues.append(result)
 
-    # Report results
-    if broken_wheels:
-        console.print(f"\n[red]❌ Found {len(broken_wheels)} broken wheels:[/red]")
-        for (
-            wheel_name,
-            wheel_path,
-            expected_sha256,
-            actual_sha256,
-            error_type,
-        ) in broken_wheels:
-            console.print(f"\n[yellow]{wheel_name}[/yellow]")
-            console.print(f"  Path: {wheel_path}")
-            if error_type == "checksum_mismatch":
-                console.print(f"  Expected: {expected_sha256}")
-                console.print(f"  Actual:   {actual_sha256}")
+    if issues:
+        for name, path, status, details in issues:
+            console.print(f"[yellow]{name}[/yellow]:{path}")
+
+            if status == "mismatch":
+                console.print(f"  [red]Error: SHA256 mismatch![/red]")
+                console.print(f"  Expected: {details[0]}")
+                console.print(f"  Actual:   {details[1]}")
+            elif status == "no_sha256":  # warning for missing SHA256
+                console.print(f"  [yellow]Warning: No SHA256 found.[/yellow]")
             else:
-                console.print(f"  [red]Error: {error_type}[/red]")
+                console.print(f"  [red]Status: {status}[/red]")
+                if details:
+                    console.print(f"  Details: {details}")
 
         raise typer.Exit(code=1)
     else:
-        console.print(
-            f"\n[green]✅ All {len(wheels)} wheels verified successfully![/green]"
-        )
-
+        console.print(f"\n[green]✅ All {len(wheels)} wheels verified successfully![/green]")
 
 if __name__ == "__main__":
     app()
