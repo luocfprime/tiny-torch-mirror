@@ -1,0 +1,36 @@
+# Include source code
+graft src
+
+# Include tests
+graft tests
+
+# Include important files
+include README.md
+include pyproject.toml
+
+# Include LICENSE if you have one
+# include LICENSE
+
+# Exclude build artifacts
+prune build
+prune dist
+prune *.egg-info
+
+# Exclude development files
+prune .venv
+exclude Makefile
+exclude poetry.lock
+exclude poetry.toml
+
+# Exclude IDE and CI/CD
+prune .vscode
+prune .github
+
+# Exclude user config files
+exclude pytorch_mirror_config.yml
+exclude *.yml
+exclude *.yaml
+
+# Global excludes
+global-exclude *~ *.py[cod] *.so *.coverage
+prune __pycache__

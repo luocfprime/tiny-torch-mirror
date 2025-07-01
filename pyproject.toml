@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiny-torch-mirror"
+version = "0.1.0"
+description = "A minimalistic PyTorch mirror for educational purposes."
+authors = [{ name = "Your Name", email = "your.email@example.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Utilities"
+]
+
+dependencies = [
+    "pydantic-settings (>=2.10.1,<3.0.0)",
+    "typer (>=0.16.0,<0.17.0)",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "httpx[socks] (>=0.28.1,<0.29.0)",
+    "packaging (>=25.0,<26.0)",
+    "tqdm (>=4.67.1,<5.0.0)",
+    "stamina (>=25.1.0,<26.0.0)",
+    "textual (>=3.5.0,<4.0.0)",
+    "structlog (>=25.4.0,<26.0.0)"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest (>=8.0.0,<9.0.0)",
+    "black (>=24.0.0,<26.0.0)",
+    "isort (>=5.13.0,<7.0.0)",
+    "pytest-sugar (>=1.0.0,<2.0.0)",
+]
+
+[project.scripts]
+tiny-torch-mirror = "tiny_torch_mirror.__main__:app"
+_tiny_torch_mirror_remote_std_interface_json = "tiny_torch_mirror._interface:_remote_std_interface_json"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["tiny_torch_mirror"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
