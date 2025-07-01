@@ -31,7 +31,7 @@ def fetch_available_from_index() -> Set[Tuple[str, str, str]]:
     )
 
     for package, cuda_version in product(config.packages, config.cuda_versions):
-        index_url = urljoin(config.index_base_url, f"{cuda_version}/{package}")
+        index_url = urljoin(config.index_base_url, f"/whl/{cuda_version}/{package}")
         try:
             response = httpx.get(index_url)
             new_wheels = parse_index_page(

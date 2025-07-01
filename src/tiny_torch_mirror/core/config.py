@@ -27,7 +27,7 @@ class PyTorchMirrorConfig(BaseSettings):
         description="Local directory for temporary storage of downloaded packages",
     )
     index_base_url: str = Field(
-        "https://download.pytorch.org/whl",
+        "https://download.pytorch.org",
         description="Base URL for the PyTorch package index",
     )
     platforms: List[str] = Field(

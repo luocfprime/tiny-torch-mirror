@@ -44,7 +44,7 @@ def single_job(wheel_name: str, download_url: str, sha256: str):
     cuda_version = re.search(r"cu\d+", download_url).group(0)
 
     dest_file_path = get_wheel_dest_path(wheel_name, cuda_version)
-    dest_rel_url = str(dest_file_path.relative_to(config.mirror_root))
+    dest_rel_url = "/" + str(dest_file_path.relative_to(config.mirror_root))
 
     # 1. Download the wheel file to local cache
     with httpx.stream("GET", download_url) as response:

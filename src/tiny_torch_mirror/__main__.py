@@ -155,7 +155,9 @@ def serve(
     with socketserver.TCPServer(("", port), Handler) as httpd:  # noqa
         print(f"Serving at http://0.0.0.0:{port}")
         print(f"To use the mirror, set the index URL to: http://localhost:{port}/")
-        print(f"E.g. : pip install torch --index-url http://localhost:{port}/whl/cu118")
+        print(
+            f"E.g. : pip install torch+cu118 --index-url http://localhost:{port}/whl/cu118"
+        )
         httpd.serve_forever()
 
 
@@ -219,7 +221,10 @@ def verify(config_path: Path = CONFIG_PATH):
 
         raise typer.Exit(code=1)
     else:
-        console.print(f"\n[green]✅ All {len(wheels)} wheels verified successfully![/green]")
+        console.print(
+            f"\n[green]✅ All {len(wheels)} wheels verified successfully![/green]"
+        )
+
 
 if __name__ == "__main__":
     app()
