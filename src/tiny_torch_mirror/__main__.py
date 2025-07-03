@@ -1,17 +1,16 @@
 import hashlib
 import itertools
 import json
-import logging
 import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import chain
 from pathlib import Path
 from typing import Optional
 
 import typer
 import uvicorn
 import yaml
-from rich.console import Console
 from tqdm import tqdm
 
 from tiny_torch_mirror.core.config import (
@@ -25,14 +24,12 @@ from tiny_torch_mirror.core.fetch import (
     fetch_existing_from_remote_mirror_repo,
 )
 from tiny_torch_mirror.core.job import run_jobs_in_threadpool
+from tiny_torch_mirror.core.log import console
 from tiny_torch_mirror.core.ui import PackageViewerApp
 from tiny_torch_mirror.core.utils import parse_wheel_name
 
 from .core.server import create_app
 
-logging.basicConfig(level=logging.INFO)
-
-console = Console()
 app = typer.Typer()
 
 
@@ -155,7 +152,7 @@ def serve(
         help='JSON string mapping local paths to fallback paths, e.g., \'{"whl/cu118": ""}\'',
     ),
 ):
-
+    """Serve the PyTorch mirror as a FastAPI application. (Run this on the machine where the mirror is located)"""
     mirror_path = Path(path).expanduser().resolve()
 
     # Parse path mappings
@@ -191,7 +188,7 @@ def serve(
 
 @app.command()
 def verify(config_path: Path = CONFIG_PATH):
-    """Verify the integrity of the mirror repo."""
+    """Verify the integrity of the mirror repo. (Run this on the machine where the mirror is located)"""
     config = load_config(config_path)
     wheels = fetch_existing_from_local_mirror_repo(
         Path(config.mirror_root), config.packages, config.cuda_versions
@@ -252,6 +249,78 @@ def verify(config_path: Path = CONFIG_PATH):
         console.print(
             f"\n[green]✅ All {len(wheels)} wheels verified successfully![/green]"
         )
+
+
+@app.command()
+def inspect(
+    path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root"),
+):
+    """Inspect mirror. (Run this on the machine where the mirror is located)"""
+    mirror_path = Path(path).expanduser().resolve()
+    cuda_versions = list(
+        map(
+            lambda p: p.name,
+            filter(
+                lambda p: p.is_dir() and p.name.startswith("cu"),
+                (mirror_path / "whl").glob("*"),
+            ),
+        )
+    )  # get CUDA versions under <mirror_root>/whl/cu[xxx]
+    packages = list(
+        set(
+            map(
+                lambda p: p.name,
+                filter(
+                    lambda p: p.is_dir(),
+                    chain.from_iterable(
+                        (mirror_path / "whl" / cu_ver).glob("*")
+                        for cu_ver in cuda_versions
+                    ),
+                ),
+            )
+        )
+    )  # get packages under <mirror_root>/whl/cu[xxx]/<package>
+
+    existing_wheels = fetch_existing_from_local_mirror_repo(
+        mirror_path, packages, cuda_versions
+    )
+
+    existing_wheels_dict = {wheel[0]: wheel for wheel in existing_wheels}
+
+    # Organize wheels by package
+    packages = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+
+    for wheel_name in set(existing_wheels_dict.keys()):
+        try:
+            parsed = parse_wheel_name(wheel_name)
+        except ValueError:
+            continue
+
+        package_name = parsed["package_name"]
+        version = parsed["version"]
+        py_ver = parsed["python_version"]
+        platform = parsed["platform"]
+
+        # get cuda version from url part (since packages like xformers do not have cuda version in the wheel name in
+        # newer versions)
+        wheel = existing_wheels_dict.get(wheel_name)
+        _, url, _ = wheel
+        cuda_ver = re.search(r"cu\d+", url).group(0)
+
+        variant = f"{cuda_ver}+{py_ver}+{platform}"
+        packages[package_name][variant][version] = {
+            "available": False,  # this field is useless as the remote index is not used
+            "installed": wheel_name in existing_wheels_dict,
+            "wheel_name": wheel_name,
+        }
+
+    if not packages:
+        console.print(f"[yellow]No packages found under {mirror_path}.[/yellow]")
+        return
+
+    # Launch TUI application
+    app_instance = PackageViewerApp(packages, {})
+    app_instance.run()
 
 
 if __name__ == "__main__":

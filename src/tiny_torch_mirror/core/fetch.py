@@ -109,7 +109,7 @@ def fetch_existing_from_local_mirror_repo(
         new_wheels = {
             (
                 wheel_name,
-                index_directory / wheel_name,
+                str(index_directory / wheel_name),
                 sha256,
             )
             for wheel_name, _, sha256 in index_wheels

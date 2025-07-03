@@ -10,7 +10,7 @@ import stamina
 from tqdm import tqdm
 
 from tiny_torch_mirror.core.config import get_config
-from tiny_torch_mirror.core.log import logger
+from tiny_torch_mirror.core.log import console, logger
 from tiny_torch_mirror.core.sync import rsync
 from tiny_torch_mirror.core.utils import (
     get_wheel_dest_path,
@@ -130,14 +130,14 @@ def run_jobs_in_threadpool(jobs: List[Tuple[str, str, str]]):
 
     pbar.close()
 
-    print(f"\n[bold]Download Summary:[/bold]")
-    print(f"  [green]✓ Successful:[/green] {len(successful_jobs)}")
-    print(f"  [red]✗ Failed:[/red] {len(failed_jobs)}")
+    console.print(f"\n[bold]Download Summary:[/bold]")
+    console.print(f"  [green]✓ Successful:[/green] {len(successful_jobs)}")
+    console.print(f"  [red]✗ Failed:[/red] {len(failed_jobs)}")
 
     if failed_jobs:
-        print(f"\n[red]Failed downloads:[/red]")
+        console.print(f"\n[red]Failed downloads:[/red]")
         for wheel_name, error in failed_jobs[:10]:
-            print(f"  • {wheel_name}")
-            print(f"    Error: {error}")
+            console.print(f"  • {wheel_name}")
+            console.print(f"    Error: {error}")
         if len(failed_jobs) > 10:
-            print(f"  ... and {len(failed_jobs) - 10} more")
+            console.print(f"  ... and {len(failed_jobs) - 10} more")
