@@ -1,3 +1,4 @@
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal
@@ -154,27 +155,30 @@ class PackageViewerApp(App):
         # Add columns
         table.add_column("Version", width=20)
 
-        # Add variant columns with better width management
-        col_width = max(12, min(20, 100 // len(all_variants))) if all_variants else 12
-
         for idx, variant in enumerate(all_variants):
-            table.add_column(variant, width=col_width)
+            table.add_column(variant, width=len(variant))
 
         # Add rows
         for version in all_versions:
-            row_data = [version]
+            # Start the row with the version number, explicitly left-justified
+            row_data = [Text(version, justify="left")]
 
             for variant in all_variants:
+                cell_to_add = None
                 if version in self.packages[package_name][variant]:
                     info = self.packages[package_name][variant][version]
                     if info["available"] and info["installed"]:
-                        row_data.append("[green]✓✓[/green]")
+                        cell_to_add = Text("✓✓", style="green", justify="center")
                     elif info["available"]:
-                        row_data.append("[yellow]✓[/yellow]")
+                        cell_to_add = Text("✓", style="yellow", justify="center")
                     elif info["installed"]:
-                        row_data.append("[blue]✓[/blue]")
-                else:
-                    row_data.append("[dim]-[/dim]")
+                        cell_to_add = Text("✓", style="blue", justify="center")
+
+                # If cell_to_add is still None, it means the version/variant combo doesn't exist
+                if cell_to_add is None:
+                    cell_to_add = Text("-", style="dim", justify="center")
+
+                row_data.append(cell_to_add)
 
             table.add_row(*row_data)
 
