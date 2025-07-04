@@ -1,6 +1,6 @@
 import getpass
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import yaml
 from pydantic import Field, field_validator
@@ -59,7 +59,7 @@ _config = None
 CONFIG_PATH = Path("pytorch_mirror_config.yml")
 
 
-def load_config(config_path: str | Path) -> PyTorchMirrorConfig:
+def load_config(config_path: Union[str, Path]) -> PyTorchMirrorConfig:
     """
     Load configuration from a YAML file.
     """
