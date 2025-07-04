@@ -187,12 +187,36 @@ def serve(
 
 
 @app.command()
-def verify(config_path: Path = CONFIG_PATH):
+def verify(
+    path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root")
+):
     """Verify the integrity of the mirror repo. (Run this on the machine where the mirror is located)"""
-    config = load_config(config_path)
-    wheels = fetch_existing_from_local_mirror_repo(
-        Path(config.mirror_root), config.packages, config.cuda_versions
-    )
+    mirror_path = Path(path).expanduser().resolve()
+    cuda_versions = list(
+        map(
+            lambda p: p.name,
+            filter(
+                lambda p: p.is_dir() and p.name.startswith("cu"),
+                (mirror_path / "whl").glob("*"),
+            ),
+        )
+    )  # get CUDA versions under <mirror_root>/whl/cu[xxx]
+    packages = list(
+        set(
+            map(
+                lambda p: p.name,
+                filter(
+                    lambda p: p.is_dir(),
+                    chain.from_iterable(
+                        (mirror_path / "whl" / cu_ver).glob("*")
+                        for cu_ver in cuda_versions
+                    ),
+                ),
+            )
+        )
+    )  # get packages under <mirror_root>/whl/cu[xxx]/<package>
+
+    wheels = fetch_existing_from_local_mirror_repo(mirror_path, packages, cuda_versions)
 
     def verify_wheel(wheel_info):
         name, path, expected_sha = wheel_info
@@ -253,7 +277,7 @@ def verify(config_path: Path = CONFIG_PATH):
 
 @app.command()
 def inspect(
-    path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root"),
+    path: str = typer.Option("~/pytorch_mirror", help="Path to the mirror root")
 ):
     """Inspect mirror. (Run this on the machine where the mirror is located)"""
     mirror_path = Path(path).expanduser().resolve()
